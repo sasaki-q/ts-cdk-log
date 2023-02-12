@@ -1,16 +1,25 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { 
+  VpcConstruct,
+  CloudWatchLogsConstruct,
+  SecurityGroupConstruct,
+  SnsTopicConstruct,
+  EcsConstruct,
+} from './construct';
+import { ConfigType } from './utils';
 
 export class TsCdkStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: cdk.StackProps & { config: ConfigType }) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    const { config } = props
+    const { env } = config
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'TsCdkQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    const { vpc } = new VpcConstruct(this, `TsCdkVpc--${env}`, { env });
+    const { securityGroup } = new SecurityGroupConstruct(this, `CdkTsSecurityGroup--${env}`, { vpc })
+    const { topic } = new SnsTopicConstruct(this, `CdkTsTopic--${env}`, { config })
+    const { loggroup } = new CloudWatchLogsConstruct(this, `CdkTsCloudWatchLogs--${env}`, { env, topicArn: topic.topicArn })
+    new EcsConstruct(this, `CdkTsEcs--${env}`, { config, vpc, loggroup, securityGroup } )
   }
 }
